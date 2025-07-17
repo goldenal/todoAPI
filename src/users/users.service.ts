@@ -10,13 +10,16 @@ export class UsersService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
-  async create(userData: Partial<User>): Promise<User> {
+  async create(userData: Partial<User>): Promise<Omit<User, 'password'>> {
     if (!userData.password) {
       throw new Error('Password is required');
     }
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const createdUser = new this.userModel({ ...userData, password: hashedPassword });
-    return createdUser.save();
+    const savedUser = await createdUser.save();
+    const userObj = typeof (savedUser as any).toObject === 'function' ? (savedUser as any).toObject() : savedUser;
+    const { password, ...userWithoutPassword } = userObj;
+    return userWithoutPassword;
   }
 
   async findByEmail(email: string): Promise<User | null> {
